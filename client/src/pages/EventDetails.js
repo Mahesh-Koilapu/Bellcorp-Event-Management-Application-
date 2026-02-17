@@ -6,7 +6,7 @@ import { AuthContext } from '../context/AuthContext';
 const EventDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated } = useContext(AuthContext);
+  const { isAuthenticated } = useContext(AuthContext);
   
   const [event, setEvent] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,11 +14,8 @@ const EventDetails = () => {
   const [success, setSuccess] = useState('');
   const [registering, setRegistering] = useState(false);
 
-  useEffect(() => {
-    fetchEvent();
-  }, [id]);
 
-  const fetchEvent = async () => {
+  const fetchEvent = React.useCallback(async () => {
     try {
       setLoading(true);
       const res = await axios.get(`http://localhost:5000/api/events/${id}`);
@@ -29,7 +26,13 @@ const EventDetails = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    fetchEvent();
+  }, [fetchEvent]);
+
+  // fetchEvent is now memoized with useCallback above
 
   const handleRegister = async () => {
     if (!isAuthenticated) {

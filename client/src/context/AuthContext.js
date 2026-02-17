@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 export const AuthContext = createContext();
@@ -8,18 +8,17 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      fetchUser();
-    } else {
-      setLoading(false);
-    }
-  }, [token]);
 
-  const fetchUser = async () => {
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+    delete axios.defaults.headers.common['Authorization'];
+  }, []);
+
+  const fetchUser = useCallback(async () => {
     try {
-      const res = await axios.get('http://localhost:5000/api/auth/me');
+      const res = await axios.get(`${process.env.REACT_APP_API_URL}/api/auth/me`);
       setUser(res.data);
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -27,10 +26,21 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [logout]);
+
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      fetchUser();
+    } else {
+      setLoading(false);
+    }
+  }, [token, fetchUser]);
+
+  // fetchUser is now memoized with useCallback above
 
   const login = async (email, password) => {
-    const res = await axios.post('http://localhost:5000/api/auth/login', {
+    const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/login`, {
       email,
       password,
     });
@@ -42,7 +52,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (name, email, password) => {
-    const res = await axios.post('http://localhost:5000/api/auth/register', {
+    const res = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/register`, {
       name,
       email,
       password,
@@ -54,12 +64,7 @@ export const AuthProvider = ({ children }) => {
     return user;
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
-  };
+
 
   return (
     <AuthContext.Provider
